@@ -10,8 +10,6 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -29,7 +27,7 @@ public class Main extends Application {
 	private Rectangle highlight;
 	public static final int PIECE_SIZE = 80;
 	@Override
-	public void start(@NotNull Stage primaryStage) throws FileNotFoundException {
+	public void start(Stage primaryStage) throws FileNotFoundException {
 		var ref = new Object() {
 			boolean gameOver = false;
 		};
@@ -155,7 +153,7 @@ public class Main extends Application {
 		updateBoard(false);
 	}
 
-	private static void addToBoard(@NotNull Piece[] pieces){
+	private static void addToBoard(Piece[] pieces){
 		for (Piece piece : pieces) {
 			Position piecePos = piece.getPosition();
 			if(!piece.isDead()){
@@ -163,8 +161,7 @@ public class Main extends Application {
 			}
 		}
 	}
-	@NotNull
-	@Contract("_, _ -> new")
+
 	private Position mouseToPos(double x, double y){
 		return new Position(((int)x) / 80, ((int)y) / 80);
 	}
