@@ -76,6 +76,7 @@ public class King extends Piece {
                 getPosition().setPos(piece.getPosition());
                 piece.setDead();
                 hasMoved = true;
+                Main.resetCount();
                 Main.changeSide();
             }
         }

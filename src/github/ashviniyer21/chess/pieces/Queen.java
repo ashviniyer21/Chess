@@ -2,7 +2,6 @@ package github.ashviniyer21.chess.pieces;
 
 import github.ashviniyer21.chess.Main;
 import github.ashviniyer21.chess.Side;
-import javafx.geometry.Pos;
 
 import java.io.FileNotFoundException;
 
@@ -163,6 +162,7 @@ public class Queen extends Piece {
         piece.setDead();
         if(!Main.isSquareThreat(getSide())){
             Main.changeSide();
+            Main.resetCount();
         } else {
             getPosition().setPos(oldPos);
             piece.undoDead();

@@ -51,6 +51,7 @@ public class Knight extends Piece {
         piece.setDead();
         if(!Main.isSquareThreat(getSide())){
             Main.changeSide();
+            Main.resetCount();
         } else {
             getPosition().setPos(oldPos);
             piece.undoDead();

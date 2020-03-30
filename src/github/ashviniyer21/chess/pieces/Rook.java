@@ -131,6 +131,7 @@ public class Rook extends Piece {
         piece.setDead();
         if(!Main.isSquareThreat(getSide())){
             Main.changeSide();
+            Main.resetCount();
             hasMoved = true;
         } else {
             getPosition().setPos(oldPos);

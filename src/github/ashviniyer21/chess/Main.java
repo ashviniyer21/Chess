@@ -25,12 +25,18 @@ public class Main extends Application {
 	private ClickState clickState;
 	private Piece selectedPiece;
 	private Rectangle highlight;
+	private static int count;
 	public static final int PIECE_SIZE = 80;
 	@Override
 	public void start(Stage primaryStage) throws FileNotFoundException {
 		var ref = new Object() {
 			boolean gameOver = false;
 		};
+		Text stalemate = new Text("Stalemate");
+		stalemate.setX(PIECE_SIZE * 4);
+		stalemate.setY(PIECE_SIZE * 4);
+		stalemate.setFill(Color.BLUE);
+		stalemate.setFont(new Font(20));
 		Text whiteWin = new Text("White wins");
 		whiteWin.setX(PIECE_SIZE * 4);
 		whiteWin.setY(PIECE_SIZE * 4);
@@ -82,6 +88,7 @@ public class Main extends Application {
 		}
 		scene.setOnMousePressed(event -> {
 			if(!ref.gameOver) {
+				count++;
 				Position position = mouseToPos(event.getSceneX(), event.getSceneY());
 				if (clickState == ClickState.FINDING_PIECE) {
 					if (board[position.getY()][position.getX()] != null && board[position.getY()][position.getX()].getSide() == currentSide) {
@@ -97,13 +104,24 @@ public class Main extends Application {
 					selectedPiece = null;
 					changeState();
 				}
+				boolean stale = false;
 				if (determineCheckMate(currentSide)) {
 					ref.gameOver = true;
+				} else if(isStalemate(currentSide)){
+					ref.gameOver = true;
+					stale = true;
+				}
+				try {
+					checkPromotion(currentSide);
+				} catch (FileNotFoundException e) {
+					e.printStackTrace();
 				}
 				updateBoard();
 				highlight(position.getX(), position.getY());
 				if(ref.gameOver){
-					if (currentSide == Side.BLACK) {
+					if(stale){
+						root.getChildren().addAll(stalemate);
+					} else if (currentSide == Side.BLACK) {
 						root.getChildren().addAll(whiteWin);
 					} else {
 						root.getChildren().addAll(blackWin);
@@ -180,7 +198,11 @@ public class Main extends Application {
 		}
 	}
 	public static Piece getPiece(int x, int y){
-		return board[y][x];
+		if(x >= 0 && x <= 7 && y >= 0 && y <= 7){
+			return board[y][x];
+		} else {
+			return null;
+		}
 	}
 
 	enum ClickState{
@@ -377,6 +399,9 @@ public class Main extends Application {
 		return false;
 	}
 	private boolean determineCheckMate(Side side){
+		if(!isSquareThreat(side)){
+			return false;
+		}
 		Piece[][] oldBoard = new Piece[8][8];
 		for(int i = 0; i < oldBoard.length; i++){
 			System.arraycopy(board[i], 0, oldBoard[i], 0, oldBoard[i].length);
@@ -425,5 +450,111 @@ public class Main extends Application {
 		currentSide = side;
 		updateBoard();
 		return true;
+	}
+	private void checkPromotion(Side side) throws FileNotFoundException {
+		Piece[] pieces;
+		if(side == Side.BLACK){
+			pieces = whitePieces;
+			side = Side.WHITE;
+		} else {
+			pieces = blackPieces;
+			side = Side.BLACK;
+		}
+		for(int i = 0; i < 8; i++){
+			Piece piece = pieces[i];
+			if (piece.getPieceType() == PieceType.PAWN && (piece.getPosition().getY() == 0 || piece.getPosition().getY() == 7)){
+				pieces[i].setDead();
+				updateBoard();
+				pieces[i] = new Queen(side, new Position(piece.getPosition().getX(), piece.getPosition().getY()));
+				updateBoard();
+			}
+		}
+	}
+	private boolean isStalemate(Side side){
+		if(isSquareThreat(side)){
+			return false;
+		}
+		if(count > 50){
+			System.out.println("COUNT");
+			return true;
+		}
+		if(insufficentMaterial(Side.BLACK) && insufficentMaterial(Side.WHITE)){
+			System.out.println("INSUF");
+			return true;
+		}
+		if(!isSquareThreat(side)){
+			Piece[] pieces;
+			if(side == Side.WHITE){
+				pieces = whitePieces;
+			} else {
+				pieces = blackPieces;
+			}
+			for (Piece piece : pieces) {
+				Position originalPos = new Position(piece.getPosition().getX(), piece.getPosition().getY());
+				for (int j = 0; j < 8; j++) {
+					for (int k = 0; k < 8; k++) {
+						updateBoard();
+						if (getPiece(j, k) == null) {
+							piece.move(new Position(j, k));
+							updateBoard();
+							if (!isSquareThreat(side)) {
+								piece.getPosition().setPos(originalPos);
+								updateBoard();
+								currentSide = side;
+								return false;
+							}
+							piece.getPosition().setPos(originalPos);
+							updateBoard();
+						} else {
+							Piece thing = getPiece(j, k);
+							boolean hi = false;
+							piece.take(thing);
+							updateBoard();
+							if(!isSquareThreat(side)){
+								hi = true;
+							}
+							piece.getPosition().setPos(originalPos);
+							thing.undoDead();
+							updateBoard();
+							if(hi){
+								currentSide = side;
+								return false;
+							}
+						}
+					}
+				}
+			}
+		}
+		System.out.println("NO MOVE");
+		return true;
+	}
+
+	public static void resetCount(){
+		count = 0;
+	}
+	private boolean insufficentMaterial(Side side){
+		Piece[] pieces;
+		if(side == Side.WHITE){
+			pieces = whitePieces;
+		} else {
+			pieces = blackPieces;
+		}
+		int tempCount = 0;
+		boolean stalemate = true;
+		for (Piece whitePiece : pieces) {
+			if (whitePiece != null && !whitePiece.isDead()) {
+				if (whitePiece.getPieceType() == PieceType.ROOK || whitePiece.getPieceType() == PieceType.PAWN || whitePiece.getPieceType() == PieceType.QUEEN) {
+					stalemate = false;
+					break;
+				} else if (whitePiece.getPieceType() == PieceType.BISHOP || whitePiece.getPieceType() == PieceType.KNIGHT) {
+					tempCount++;
+				}
+			}
+			if (tempCount > 1) {
+				stalemate = false;
+				break;
+			}
+		}
+		return stalemate;
 	}
 }

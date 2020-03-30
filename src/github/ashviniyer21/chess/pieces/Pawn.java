@@ -2,7 +2,6 @@ package github.ashviniyer21.chess.pieces;
 
 import github.ashviniyer21.chess.Main;
 import github.ashviniyer21.chess.Side;
-import javafx.geometry.Pos;
 
 import java.io.FileNotFoundException;
 
@@ -66,6 +65,7 @@ public class Pawn extends Piece {
 		if(!Main.isSquareThreat(getSide())){
 			Main.changeSide();
 			hasMoved = true;
+			Main.resetCount();
 		} else {
 			getPosition().setPos(oldPos);
 			piece.undoDead();
