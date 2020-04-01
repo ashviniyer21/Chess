@@ -26,7 +26,7 @@ public class Main extends Application {
 	private Piece selectedPiece;
 	private Rectangle highlight;
 	private static int count;
-	public static final int PIECE_SIZE = 80;
+	public static final int PIECE_SIZE = 60;
 	@Override
 	public void start(Stage primaryStage) throws FileNotFoundException {
 		var ref = new Object() {
@@ -51,12 +51,12 @@ public class Main extends Application {
 		currentSide = Side.WHITE;
 		board = new Piece[8][8];
 		root = new Pane();
-		highlight = new Rectangle(80*9, 80*9, PIECE_SIZE, PIECE_SIZE);
+		highlight = new Rectangle(PIECE_SIZE*9, PIECE_SIZE*9, PIECE_SIZE, PIECE_SIZE);
 		highlight.setFill(Color.TRANSPARENT);
 		highlight.setStrokeWidth(5);
 		highlight.setStroke(Color.YELLOW);
 		root.getChildren().addAll(highlight);
-		BackgroundImage image = new BackgroundImage(new Image(new FileInputStream("chess_board.png"), 640, 640, false, true), BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.DEFAULT, BackgroundSize.DEFAULT);
+		BackgroundImage image = new BackgroundImage(new Image(new FileInputStream("chess_board.png"), 8*PIECE_SIZE, 8*PIECE_SIZE, false, true), BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.DEFAULT, BackgroundSize.DEFAULT);
 		Background background = new Background(image);
 		root.setBackground(background);
 		primaryStage.setTitle("Chess");
@@ -180,10 +180,23 @@ public class Main extends Application {
 		}
 	}
 
+	private static void updatePrevMoves(Side side){
+		Piece[] pieces;
+		if(side == Side.WHITE){
+			pieces = whitePieces;
+		} else {
+			pieces = blackPieces;
+		}
+		for (Piece piece : pieces) {
+			piece.updatePrevMoves();
+		}
+	}
+
 	private Position mouseToPos(double x, double y){
-		return new Position(((int)x) / 80, ((int)y) / 80);
+		return new Position(((int)x) / PIECE_SIZE, ((int)y) / PIECE_SIZE);
 	}
 	public static void changeSide(){
+		updatePrevMoves(currentSide);
 		if(currentSide == Side.WHITE){
 			currentSide = Side.BLACK;
 		} else {
@@ -488,6 +501,11 @@ public class Main extends Application {
 				pieces = whitePieces;
 			} else {
 				pieces = blackPieces;
+			}
+			for(Piece piece: pieces){
+				if(piece.checkStalemate()){
+					return true;
+				}
 			}
 			for (Piece piece : pieces) {
 				Position originalPos = new Position(piece.getPosition().getX(), piece.getPosition().getY());

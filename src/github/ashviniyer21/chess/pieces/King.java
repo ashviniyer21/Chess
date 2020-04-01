@@ -34,7 +34,9 @@ public class King extends Piece {
 
                 if(Main.getPiece(getPosition().getX() + 3, isle) != null
                         && !Main.getPiece(getPosition().getX() + 3, isle).hasMoved()
+                        && !Main.isSquareThreat(getPosition().getX() + 2, isle, getSide())
                         && Main.getPiece(getPosition().getX() + 2, isle) == null
+                        && !Main.isSquareThreat(getPosition().getX() + 1, isle, getSide())
                         && Main.getPiece(getPosition().getX() + 1, isle) == null
                 ){
                     Main.getPiece(getPosition().getX() + 3, isle).getPosition().setPos(getPosition().getX() + 1, isle);
@@ -45,8 +47,11 @@ public class King extends Piece {
             } else if(xDiff == -2){
                 if(Main.getPiece(getPosition().getX() - 4, isle) != null
                         && !Main.getPiece(getPosition().getX() - 4, isle).hasMoved()
+                        && !Main.isSquareThreat(getPosition().getX() - 3, isle, getSide())
                         && Main.getPiece(getPosition().getX() - 3, isle )== null
+                        && !Main.isSquareThreat(getPosition().getX() - 2, isle, getSide())
                         && Main.getPiece(getPosition().getX() - 2, isle) == null
+                        && !Main.isSquareThreat(getPosition().getX() - 1, isle, getSide())
                         && Main.getPiece(getPosition().getX() - 1, isle) == null
                 ){
                     Main.getPiece(getPosition().getX() - 4, isle).getPosition().setPos(getPosition().getX() - 1, isle);

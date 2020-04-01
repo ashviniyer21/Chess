@@ -31,6 +31,12 @@ public class Pawn extends Piece {
 					doMove(position);
 				}
 			}
+		} else if(Math.abs(xDiff) == 1 && yDiff == 1){
+			if(Main.getPiece(position.getX(), position.getY() + sign) != null
+					&& Math.abs(Main.getPiece(position.getX(), position.getY() + sign).getPrevPosition(1).getY() -  getPosition().getY()) == 2
+					&& doMove(position)){
+				Main.getPiece(position.getX(), position.getY() + sign).setDead();
+			}
 		}
 		updatePosImage();
 	}
@@ -48,14 +54,16 @@ public class Pawn extends Piece {
 		}
 		updatePosImage();
 	}
-	private void doMove(Position position){
+	private boolean doMove(Position position){
 		Position oldPos = new Position(getPosition().getX(), getPosition().getY());
 		getPosition().setPos(position);
 		if(!Main.isSquareThreat(getSide())){
 			hasMoved = true;
 			Main.changeSide();
+			return true;
 		} else {
 			getPosition().setPos(oldPos);
+			return false;
 		}
 	}
 	private void doTake(Piece piece){
