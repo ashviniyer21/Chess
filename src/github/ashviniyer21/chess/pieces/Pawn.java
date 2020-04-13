@@ -32,7 +32,7 @@ public class Pawn extends Piece {
 				}
 			}
 		} else if(Math.abs(xDiff) == 1 && yDiff == 1){
-			if(Main.getPiece(position.getX(), position.getY() + sign) != null
+			if(Main.getPiece(position.getX(), position.getY() + sign) != null && prevMovesLength() > 1
 					&& Math.abs(Main.getPiece(position.getX(), position.getY() + sign).getPrevPosition(1).getY() -  getPosition().getY()) == 2
 					&& doMove(position)){
 				Main.getPiece(position.getX(), position.getY() + sign).setDead();

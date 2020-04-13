@@ -13,10 +13,13 @@ import javafx.stage.Stage;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.Arrays;
+import java.util.*;
 
 
 public class Main extends Application {
+	private final int posGain = 1;
+	private final int pieceGain = 5;
+	private final boolean isAi = true;
 	private static Side currentSide;
 	private static Piece[][] board;
 	private static Pane root;
@@ -118,6 +121,31 @@ public class Main extends Application {
 				}
 				updateBoard();
 				highlight(position.getX(), position.getY());
+				if(ref.gameOver){
+					if(stale){
+						root.getChildren().addAll(stalemate);
+					} else if (currentSide == Side.BLACK) {
+						root.getChildren().addAll(whiteWin);
+					} else {
+						root.getChildren().addAll(blackWin);
+					}
+				}
+			}
+			if(!ref.gameOver && clickState == ClickState.FINDING_PIECE && isAi && currentSide == Side.BLACK){
+				aiMove(currentSide);
+				boolean stale = false;
+				if (determineCheckMate(currentSide)) {
+					ref.gameOver = true;
+				} else if(isStalemate(currentSide)){
+					ref.gameOver = true;
+					stale = true;
+				}
+				try {
+					checkPromotion(currentSide);
+				} catch (FileNotFoundException e) {
+					e.printStackTrace();
+				}
+				updateBoard();
 				if(ref.gameOver){
 					if(stale){
 						root.getChildren().addAll(stalemate);
@@ -574,5 +602,176 @@ public class Main extends Application {
 			}
 		}
 		return stalemate;
+	}
+
+	private void aiMove(Side side){
+		HashMap<Piece, HashMap<Position, Integer>> values = new HashMap<>();
+		Piece[] pieces;
+		if(side == Side.WHITE){
+			pieces = whitePieces;
+		} else {
+			pieces = blackPieces;
+		}
+		for (Piece piece : pieces) {
+			HashMap<Position, Integer> list = new HashMap<>();
+			values.put(piece, list);
+			Position originalPos = new Position(piece.getPosition().getX(), piece.getPosition().getY());
+			int orgPosVal = calcPosValue(piece, originalPos);
+			for (int j = 0; j < 8; j++) {
+				if(piece.isDead()){
+					break;
+				}
+				for (int k = 0; k < 8; k++) {
+					updateBoard();
+					if (getPiece(j, k) == null) {
+						Position temp = new Position(j, k);
+						piece.move(temp);
+						updateBoard();
+						int val = Integer.MIN_VALUE;
+						if(!isSquareThreat(side)){
+							val = (calcPosValue(piece, piece.getPosition()) - orgPosVal) * posGain;
+							Side oSide;
+							if(side == Side.WHITE){
+								oSide = Side.BLACK;
+							} else {
+								oSide = Side.WHITE;
+							}
+							if(isSquareThreat(temp.getX(), temp.getY(), side) && !isSquareThreat(temp.getX(), temp.getY(), oSide)){
+								val -= piece.getValue() * pieceGain;
+							}
+						}
+						if (!piece.getPosition().equals(originalPos)) {
+							list.put(temp, val);
+						}
+						piece.getPosition().setPos(originalPos);
+						updateBoard();
+					} else {
+						Piece thing = getPiece(j, k);
+						piece.take(thing);
+						updateBoard();
+						int val = Integer.MIN_VALUE;
+						if(!isSquareThreat(side) && thing.getSide() != side){
+							val = thing.getValue();
+							if(isSquareThreat(thing.getPosition().getX(), thing.getPosition().getY(), side)){
+								val -= piece.getValue();
+							}
+							val *= pieceGain;
+							val += (calcPosValue(piece, thing.getPosition()) - calcPosValue(piece, originalPos))*posGain;
+						}
+						if(!piece.getPosition().equals(originalPos)){
+							list.put(thing.getPosition(), val);
+						}
+						piece.getPosition().setPos(originalPos);
+						thing.undoDead();
+						updateBoard();
+					}
+				}
+			}
+		}
+		Piece move = pieces[0];
+		Position movePos = new Position(0, 0);
+		int maxVal = Integer.MIN_VALUE;
+		for(Piece piece: pieces){
+			HashMap<Position, Integer> map = values.get(piece);
+			for (Map.Entry<Position, Integer> entry : map.entrySet()) {
+				if(entry.getValue() > maxVal){
+					maxVal = entry.getValue();
+					movePos = entry.getKey();
+					move = piece;
+				}
+			}
+		}
+		if(getPiece(movePos.getX(), movePos.getY()) == null){
+			move.move(movePos);
+		} else {
+			move.take(getPiece(movePos.getX(), movePos.getY()));
+		}
+		if(currentSide == side){
+			changeSide();
+		}
+	}
+
+	private int calcPosValue(Piece piece, Position position){
+		int[][] values = new int[8][8];
+		switch (piece.getPieceType()){
+			case PAWN:
+				values = new int[][] {
+						{0, 0, 0, 0, 0, 0, 0, 0},
+						{10, 10, 10, 10, 10, 10, 10, 10},
+						{2, 2, 4, 6, 6, 4, 2, 2},
+						{1, 1, 2, 5, 5, 2, 1, 1},
+						{0, 0, 0, 4, 4, 0, 0, 0},
+						{1, -1, -2, 0, 0, -2, -1, 1},
+						{1, 2, 2, -4, -4, 2, 2, 1},
+						{0, 0, 0, 0, 0, 0, 0, 0}
+				};
+				break;
+			case ROOK:
+				values = new int[][] {
+						{0, 0, 0, 0, 0, 0, 0, 0},
+						{1, 2, 2, 2, 2, 2, 2, 1},
+						{-1, 0, 0, 0, 0, 0, 0, -1},
+						{-1, 0, 0, 0, 0, 0, 0, -1},
+						{-1, 0, 0, 0, 0, 0, 0, -1},
+						{-1, 0, 0, 0, 0, 0, 0, -1},
+						{-1, 0, 0, 0, 0, 0, 0, -1},
+						{0, 0, 0, 1, 1, 0, 0, 0}
+				};
+				break;
+			case QUEEN:
+				values = new int[][] {
+						{-4, -2, -2, -1, -1, -2, -2, -4},
+						{-2, 0, 0, 0, 0, 0, 0, -2},
+						{-2, 0, 1, 1, 1, 1, 0, -2},
+						{-1, 0, 1, 1, 1, 1, 0, -1},
+						{0, 0, 1, 1, 1, 1, 0, 0},
+						{-2, 1, 1, 1, 1, 1, 0, -2},
+						{-2, 0, 1, 0, 0, 0, 0, -2},
+						{-4, -2, -2, -1, -1, -2, -2, -4}
+				};
+				break;
+			case BISHOP:
+				values = new int[][] {
+						{-4, -2, -2, -2, -2, -2, -2, -4},
+						{-2, 0, 0, 0, 0, 0, 0, -2},
+						{-2, 0, 1, 2, 2, 1, 0, -2},
+						{-2, 1, 1, 2, 2, 1, 1, -2},
+						{-2, 0, 2, 2, 2, 2, 0, -2},
+						{-2, 2, 2, 2, 2, 2, 2, -2},
+						{-2, 1, 0, 0, 0, 0, 1, -2},
+						{-4, -2, -2, -2, -2, -2, -2, -4}
+				};
+				break;
+			case KNIGHT:
+				values = new int[][] {
+						{-10, -8, -6, -6, -6, -6, -8, -10},
+						{-8, -4, 0, 0, 0, 0, -4, -8},
+						{-6, 0, 2, 3, 3, 2, 0, -6},
+						{-6, 1, 3, 4, 4, 3, 1, -6},
+						{-6, 0, 3, 4, 4, 3, 0, -6},
+						{-6, 1, 2, 3, 3, 2, 1, -6},
+						{-8, -4, 0, 1, 1, 0, -4, -8},
+						{-10, -8, -6, -6, -6, -6, -8, -10}
+				};
+				break;
+			case KING:
+				values = new int[][] {
+						{-6, -8, -8, -10, -10, -8, -8, -6},
+						{-6, -8, -8, -10, -10, -8, -8, -6},
+						{-6, -8, -8, -10, -10, -8, -8, -6},
+						{-6, -8, -8, -10, -10, -8, -8, -6},
+						{-4, -6, -6, -8, -8, -6, -6, -4},
+						{-2, -4, -4, -4, -4, -4, -4, -2},
+						{4, 4, 0, 0, 0, 0, 4, 4},
+						{4, 6, 2, 0, 0, 2, 6, 4}
+				};
+				break;
+		}
+		if(piece.getSide() == Side.BLACK){
+			List<int[]> temp = Arrays.asList(values);
+			Collections.reverse(temp);
+			values = temp.toArray(values);
+		}
+		return values[position.getY()][position.getX()];
 	}
 }

@@ -39,7 +39,7 @@ public abstract class Piece extends ImageView {
 	public void setDead(){
 		isDead = true;
 	}
-	public double getValue(){
+	public int getValue(){
 		return value;
 	}
 	public Position getPosition(){
@@ -76,6 +76,10 @@ public abstract class Piece extends ImageView {
 	}
 	public Position getPrevPosition(int index){
 		return prevMoves.get(index);
+	}
+
+	public int prevMovesLength(){
+		return prevMoves.size();
 	}
 
 }
