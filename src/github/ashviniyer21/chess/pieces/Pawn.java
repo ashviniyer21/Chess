@@ -79,4 +79,9 @@ public class Pawn extends Piece {
 			piece.undoDead();
 		}
 	}
+
+	@Override
+	public void setHasMoved(boolean hasMoved) {
+		this.hasMoved = hasMoved;
+	}
 }

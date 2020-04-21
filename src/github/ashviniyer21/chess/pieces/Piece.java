@@ -59,6 +59,11 @@ public abstract class Piece extends ImageView {
 	public boolean hasMoved(){
 		return true;
 	}
+
+	public void setHasMoved(boolean hasMoved){
+
+	}
+
 	public PieceType getPieceType(){
 		return pieceType;
 	}

@@ -17,9 +17,9 @@ import java.util.*;
 
 
 public class Main extends Application {
-	private final int posGain = 1;
+	private final int posGain = 2;
 	private final int pieceGain = 5;
-	private final boolean isAi = true;
+	private final boolean isAi = false;
 	private static Side currentSide;
 	private static Piece[][] board;
 	private static Pane root;
@@ -625,43 +625,96 @@ public class Main extends Application {
 					updateBoard();
 					if (getPiece(j, k) == null) {
 						Position temp = new Position(j, k);
+						boolean tempHasMoved = piece.hasMoved();
 						piece.move(temp);
 						updateBoard();
 						int val = Integer.MIN_VALUE;
 						if(!isSquareThreat(side)){
 							val = (calcPosValue(piece, piece.getPosition()) - orgPosVal) * posGain;
-							Side oSide;
-							if(side == Side.WHITE){
-								oSide = Side.BLACK;
-							} else {
-								oSide = Side.WHITE;
-							}
-							if(isSquareThreat(temp.getX(), temp.getY(), side) && !isSquareThreat(temp.getX(), temp.getY(), oSide)){
-								val -= piece.getValue() * pieceGain;
+							for(int a = 0; a < 8; a++){
+								for(int b = 0; b < 8; b++){
+									Side oSide;
+									if(side == Side.WHITE){
+										oSide = Side.BLACK;
+									} else {
+										oSide = Side.WHITE;
+									}
+									ArrayList<Integer> list1 = threats(a, b, side);
+									boolean good = false;
+									if(getPiece(a, b) != null && getPiece(a, b).getSide() == side){
+										list1.add(0, getPiece(a, b).getValue());
+										good = true;
+									}
+									ArrayList<Integer> list2 = threats(a, b, oSide);
+//							if(isSquareThreat(temp.getX(), temp.getY(), side) && !isSquareThreat(temp.getX(), temp.getY(), oSide)){
+//								val -= piece.getValue() * pieceGain;
+//							}
+									while (list1.size() > 0 && list2.size() > 0 && good){
+										val -= list1.remove(0) * pieceGain;
+										if(list1.size() <= 0){
+											break;
+										}
+										val += list2.remove(0) * pieceGain;
+									}
+								}
 							}
 						}
 						if (!piece.getPosition().equals(originalPos)) {
 							list.put(temp, val);
 						}
+						piece.setHasMoved(tempHasMoved);
 						piece.getPosition().setPos(originalPos);
 						updateBoard();
 					} else {
 						Piece thing = getPiece(j, k);
+						boolean tempHasMoved = piece.hasMoved();
 						piece.take(thing);
 						updateBoard();
 						int val = Integer.MIN_VALUE;
 						if(!isSquareThreat(side) && thing.getSide() != side){
-							val = thing.getValue();
-							if(isSquareThreat(thing.getPosition().getX(), thing.getPosition().getY(), side)){
-								val -= piece.getValue();
+							val = (calcPosValue(piece, thing.getPosition()) - calcPosValue(piece, originalPos))*posGain;
+//							val = thing.getValue();
+//							if(isSquareThreat(thing.getPosition().getX(), thing.getPosition().getY(), side)){
+//								val -= piece.getValue();
+//							}
+							for(int a = 0; a < 8; a++){
+								for(int b = 0; b < 8; b++){
+									Side oSide;
+									if(side == Side.WHITE){
+										oSide = Side.BLACK;
+									} else {
+										oSide = Side.WHITE;
+									}
+									ArrayList<Integer> list1 = threats(j, k, side);
+									boolean good = false;
+									if(getPiece(a, b) != null && getPiece(a, b).getSide() == side){
+										list1.add(0, getPiece(a, b).getValue());
+										good = true;
+									}
+									ArrayList<Integer> list2 = threats(j, k, oSide);
+//							if(isSquareThreat(temp.getX(), temp.getY(), side) && !isSquareThreat(temp.getX(), temp.getY(), oSide)){
+//								val -= piece.getValue() * pieceGain;
+//							}
+									while (list1.size() > 0 && list2.size() > 0 && good){
+										val -= list1.remove(0);
+										if(list1.size() <= 0){
+											break;
+										}
+										val += list2.remove(0);
+										if(list2.size() <= 0){
+											break;
+										}
+									}
+								}
 							}
+							val += thing.getValue();
 							val *= pieceGain;
-							val += (calcPosValue(piece, thing.getPosition()) - calcPosValue(piece, originalPos))*posGain;
 						}
 						if(!piece.getPosition().equals(originalPos)){
 							list.put(thing.getPosition(), val);
 						}
 						piece.getPosition().setPos(originalPos);
+						piece.setHasMoved(tempHasMoved);
 						thing.undoDead();
 						updateBoard();
 					}
@@ -697,81 +750,273 @@ public class Main extends Application {
 			case PAWN:
 				values = new int[][] {
 						{0, 0, 0, 0, 0, 0, 0, 0},
-						{10, 10, 10, 10, 10, 10, 10, 10},
-						{2, 2, 4, 6, 6, 4, 2, 2},
-						{1, 1, 2, 5, 5, 2, 1, 1},
-						{0, 0, 0, 4, 4, 0, 0, 0},
-						{1, -1, -2, 0, 0, -2, -1, 1},
 						{1, 2, 2, -4, -4, 2, 2, 1},
+						{1, -1, -2, 0, 0, -2, -1, 1},
+						{0, 0, 0, 4, 4, 0, 0, 0},
+						{1, 1, 2, 5, 5, 2, 1, 1},
+						{2, 2, 4, 6, 6, 4, 2, 2},
+						{10, 10, 10, 10, 10, 10, 10, 10},
 						{0, 0, 0, 0, 0, 0, 0, 0}
 				};
 				break;
 			case ROOK:
 				values = new int[][] {
-						{0, 0, 0, 0, 0, 0, 0, 0},
+						{0, 0, 0, 1, 1, 0, 0, 0},
+						{-1, 0, 0, 0, 0, 0, 0, -1},
+						{-1, 0, 0, 0, 0, 0, 0, -1},
+						{-1, 0, 0, 0, 0, 0, 0, -1},
+						{-1, 0, 0, 0, 0, 0, 0, -1},
+						{-1, 0, 0, 0, 0, 0, 0, -1},
 						{1, 2, 2, 2, 2, 2, 2, 1},
-						{-1, 0, 0, 0, 0, 0, 0, -1},
-						{-1, 0, 0, 0, 0, 0, 0, -1},
-						{-1, 0, 0, 0, 0, 0, 0, -1},
-						{-1, 0, 0, 0, 0, 0, 0, -1},
-						{-1, 0, 0, 0, 0, 0, 0, -1},
-						{0, 0, 0, 1, 1, 0, 0, 0}
+						{0, 0, 0, 0, 0, 0, 0, 0}
 				};
 				break;
 			case QUEEN:
 				values = new int[][] {
 						{-4, -2, -2, -1, -1, -2, -2, -4},
-						{-2, 0, 0, 0, 0, 0, 0, -2},
-						{-2, 0, 1, 1, 1, 1, 0, -2},
-						{-1, 0, 1, 1, 1, 1, 0, -1},
-						{0, 0, 1, 1, 1, 1, 0, 0},
-						{-2, 1, 1, 1, 1, 1, 0, -2},
 						{-2, 0, 1, 0, 0, 0, 0, -2},
+						{-2, 1, 1, 1, 1, 1, 0, -2},
+						{0, 0, 1, 1, 1, 1, 0, 0},
+						{-1, 0, 1, 1, 1, 1, 0, -1},
+						{-2, 0, 1, 1, 1, 1, 0, -2},
+						{-2, 0, 0, 0, 0, 0, 0, -2},
 						{-4, -2, -2, -1, -1, -2, -2, -4}
 				};
 				break;
 			case BISHOP:
 				values = new int[][] {
 						{-4, -2, -2, -2, -2, -2, -2, -4},
-						{-2, 0, 0, 0, 0, 0, 0, -2},
-						{-2, 0, 1, 2, 2, 1, 0, -2},
-						{-2, 1, 1, 2, 2, 1, 1, -2},
-						{-2, 0, 2, 2, 2, 2, 0, -2},
-						{-2, 2, 2, 2, 2, 2, 2, -2},
 						{-2, 1, 0, 0, 0, 0, 1, -2},
+						{-2, 2, 2, 2, 2, 2, 2, -2},
+						{-2, 0, 2, 2, 2, 2, 0, -2},
+						{-2, 1, 1, 2, 2, 1, 1, -2},
+						{-2, 0, 1, 2, 2, 1, 0, -2},
+						{-2, 0, 0, 0, 0, 0, 0, -2},
 						{-4, -2, -2, -2, -2, -2, -2, -4}
 				};
 				break;
 			case KNIGHT:
 				values = new int[][] {
 						{-10, -8, -6, -6, -6, -6, -8, -10},
-						{-8, -4, 0, 0, 0, 0, -4, -8},
-						{-6, 0, 2, 3, 3, 2, 0, -6},
-						{-6, 1, 3, 4, 4, 3, 1, -6},
-						{-6, 0, 3, 4, 4, 3, 0, -6},
-						{-6, 1, 2, 3, 3, 2, 1, -6},
 						{-8, -4, 0, 1, 1, 0, -4, -8},
+						{-6, 1, 2, 3, 3, 2, 1, -6},
+						{-6, 0, 3, 4, 4, 3, 0, -6},
+						{-6, 1, 3, 4, 4, 3, 1, -6},
+						{-6, 0, 2, 3, 3, 2, 0, -6},
+						{-8, -4, 0, 0, 0, 0, -4, -8},
 						{-10, -8, -6, -6, -6, -6, -8, -10}
 				};
 				break;
 			case KING:
 				values = new int[][] {
-						{-6, -8, -8, -10, -10, -8, -8, -6},
-						{-6, -8, -8, -10, -10, -8, -8, -6},
-						{-6, -8, -8, -10, -10, -8, -8, -6},
-						{-6, -8, -8, -10, -10, -8, -8, -6},
-						{-4, -6, -6, -8, -8, -6, -6, -4},
-						{-2, -4, -4, -4, -4, -4, -4, -2},
+						{4, 6, 2, 0, 0, 2, 6, 4},
 						{4, 4, 0, 0, 0, 0, 4, 4},
-						{4, 6, 2, 0, 0, 2, 6, 4}
+						{-2, -4, -4, -4, -4, -4, -4, -2},
+						{-4, -6, -6, -8, -8, -6, -6, -4},
+						{-6, -8, -8, -10, -10, -8, -8, -6},
+						{-6, -8, -8, -10, -10, -8, -8, -6},
+						{-6, -8, -8, -10, -10, -8, -8, -6},
+						{-6, -8, -8, -10, -10, -8, -8, -6}
 				};
 				break;
 		}
-		if(piece.getSide() == Side.BLACK){
-			List<int[]> temp = Arrays.asList(values);
-			Collections.reverse(temp);
-			values = temp.toArray(values);
-		}
+//		if(piece.getSide() == Side.BLACK){
+			for(int a = 0; a < values.length/2; a++){
+				int[] x = new int[8];
+				int[] y = new int[8];
+				for(int b = 0; b < values.length; b++){
+					x[b] = values[a][b];
+					y[b] = values[7-a][b];
+				}
+				values[a] = y;
+				values[7-a] = x;
+			}
+//		}
 		return values[position.getY()][position.getX()];
+	}
+
+	private ArrayList<Integer> threats(int x, int y, Side side){
+		ArrayList<Integer> list = new ArrayList<>();
+		Piece[] pieces;
+		if(side == Side.WHITE){
+			pieces = whitePieces;
+		} else {
+			pieces = blackPieces;
+		}
+		for (Piece piece : pieces) {
+			Position position = piece.getPosition();
+			if(!piece.isDead()){
+				switch (piece.getPieceType()){
+					case KING:
+						for(int i = -1; i <= 1; i++){
+							for(int j = -1; j <= 1; j++){
+								if(position.getX() + i == x && position.getY() + j == y){
+									list.add(piece.getValue());
+								}
+							}
+						}
+						break;
+					case PAWN:
+						if(Math.abs(x - position.getX()) == 1){
+							if(side == Side.WHITE){
+								if(position.getY() + 1 == y){
+									list.add(piece.getValue());
+								}
+							} else {
+								if(position.getY() - 1 == y){
+									list.add(piece.getValue());
+								}
+							}
+						}
+						break;
+					case ROOK:
+						int xDiff = position.getX() - x;
+						int yDiff = position.getY() - y;
+						boolean giveTrue = false;
+						if(xDiff == 0){
+							giveTrue = true;
+							if(yDiff < 0){
+								for(int i = y - 1; i > position.getY(); i--){
+									if (getPiece(x, i) != null) {
+										giveTrue = false;
+										break;
+									}
+								}
+							} else if(yDiff > 0){
+								for(int i = y + 1; i < position.getY(); i++){
+									if (getPiece(x, i) != null) {
+										giveTrue = false;
+										break;
+									}
+								}
+							}
+						} else if(yDiff == 0){
+							giveTrue = true;
+							if(xDiff < 0){
+								for(int i = x - 1; i > position.getX(); i--){
+									if (getPiece(i, y) != null) {
+										giveTrue = false;
+										break;
+									}
+								}
+							} else {
+								for(int i = x + 1; i < position.getX(); i++){
+									if (getPiece(i, y) != null) {
+										giveTrue = false;
+										break;
+									}
+								}
+							}
+						}
+						if(giveTrue){
+							list.add(piece.getValue());
+						}
+						break;
+					case QUEEN:
+						xDiff = position.getX() - x;
+						yDiff = position.getY() - y;
+						giveTrue = false;
+						if(xDiff == 0){
+							giveTrue = true;
+							if(yDiff < 0){
+								for(int i = y - 1; i > position.getY(); i--){
+									if (getPiece(x, i) != null) {
+										giveTrue = false;
+										break;
+									}
+								}
+							} else if(yDiff > 0){
+								for(int i = y + 1; i < position.getY(); i++){
+									if (getPiece(x, i) != null) {
+										giveTrue = false;
+										break;
+									}
+								}
+							}
+						} else if(yDiff == 0){
+							giveTrue = true;
+							if(xDiff < 0){
+								for(int i = x - 1; i > position.getX(); i--){
+									if (getPiece(i, y) != null) {
+										giveTrue = false;
+										break;
+									}
+								}
+							} else {
+								for(int i = x + 1; i < position.getX(); i++){
+									if (getPiece(i, y) != null) {
+										giveTrue = false;
+										break;
+									}
+								}
+							}
+						}
+						if(giveTrue){
+							list.add(piece.getValue());
+						}
+						boolean isGood = false;
+						if(Math.abs(xDiff) == Math.abs(yDiff)){
+							isGood = true;
+							int xMult = 1;
+							int yMult = 1;
+							if(xDiff > 0){
+								xMult = -1;
+							}
+							if(yDiff > 0){
+								yMult = -1;
+							}
+							for(int i = 1; i < Math.abs(xDiff); i++){
+								if(Main.getPiece(position.getX() + i * xMult, position.getY() + i * yMult) != null){
+									isGood = false;
+									break;
+								}
+							}
+						}
+						if(isGood){
+							list.add(piece.getValue());
+						}
+						break;
+					case BISHOP:
+						xDiff = position.getX() - x;
+						yDiff = position.getY() - y;
+						isGood = false;
+						if(Math.abs(xDiff) == Math.abs(yDiff)){
+							isGood = true;
+							int xMult = 1;
+							int yMult = 1;
+							if(xDiff > 0){
+								xMult = -1;
+							}
+							if(yDiff > 0){
+								yMult = -1;
+							}
+							for(int i = 1; i < Math.abs(xDiff); i++){
+								if(Main.getPiece(position.getX() + i * xMult, position.getY() + i * yMult) != null){
+									isGood = false;
+									break;
+								}
+							}
+						}
+						if(isGood){
+							list.add(piece.getValue());
+						}
+						break;
+					case KNIGHT:
+						if((position.getX() + 2 == x && position.getY() + 1 == y)
+								|| (position.getX() + 2 == x && position.getY() - 1 == y)
+								|| (position.getX() - 2 == x && position.getY() + 1 == y)
+								|| (position.getX() - 2 == x && position.getY() - 1 == y)
+								|| (position.getX() + 1 == x && position.getY() + 2 == y)
+								|| (position.getX() + 1 == x && position.getY() - 2 == y)
+								|| (position.getX() - 1 == x && position.getY() + 2 == y)
+								|| (position.getX() - 1 == x && position.getY() - 2 == y)){
+							list.add(piece.getValue());
+						}
+						break;
+				}
+			}
+		}
+		Collections.sort(list);
+		return list;
 	}
 }

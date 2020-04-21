@@ -8,7 +8,7 @@ import java.io.FileNotFoundException;
 public class King extends Piece {
     private boolean hasMoved;
     public King(Side side, Position position) throws FileNotFoundException {
-        super("king_white.png", "king_black.png", side, 0, position, PieceType.KING);
+        super("king_white.png", "king_black.png", side, 10, position, PieceType.KING);
         hasMoved = false;
     }
 
